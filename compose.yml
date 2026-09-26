@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: reservation-postgres
+    environment:
+      POSTGRES_DB: reservation_db
+      POSTGRES_USER: reservation_user
+      POSTGRES_PASSWORD: reservation_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - reservation_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reservation_user -d reservation_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  reservation_postgres_data:

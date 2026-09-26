@@ -1,3 +1,21 @@
 spring:
   application:
     name: reservation-service
+
+  profiles:
+    default: dev
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+  endpoint:
+    health:
+      show-details: when-authorized
+
+info:
+  application:
+    name: ${spring.application.name}
+    description: Coworking space reservation API
