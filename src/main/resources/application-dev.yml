@@ -14,3 +14,8 @@ spring:
         format_sql: true
 
     show-sql: true
+
+security:
+  jwt:
+    secret: "reservation-service-local-jwt-signing-key-2026-dev"
+    access-token-ttl: 15m

@@ -1,0 +1,8 @@
+package com.coworking.reservation.auth.dto;
+
+public record AuthResponse(
+        String accessToken,
+        String tokenType,
+        long expiresIn
+) {
+}
