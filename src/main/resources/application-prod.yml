@@ -19,3 +19,10 @@ security:
   jwt:
     secret: ${JWT_SIGNING_SECRET}
     access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:15m}
+
+springdoc:
+  api-docs:
+    enabled: false
+
+  swagger-ui:
+    enabled: false

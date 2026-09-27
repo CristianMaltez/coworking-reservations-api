@@ -1,5 +1,6 @@
 package com.coworking.reservation.space.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
@@ -12,19 +13,24 @@ import java.math.BigDecimal;
 public record UpdateSpaceRequest(
         @NotBlank(message = "El nombre es obligatorio")
         @Size(max = 150, message = "El nombre no debe superar 150 caracteres")
+        @Schema(description = "Nombre del espacio", example = "Sala Ejecutiva 1")
         String name,
         @NotNull(message = "El tipo de espacio es obligatorio")
         @Positive(message = "El tipo de espacio debe ser positivo")
+        @Schema(description = "ID del catálogo SpaceType", example = "2")
         Short spaceTypeId,
         @NotNull(message = "La capacidad es obligatoria")
         @Positive(message = "La capacidad debe ser positiva")
+        @Schema(description = "Capacidad máxima de personas", example = "8")
         Integer capacity,
         @NotBlank(message = "La ubicación es obligatoria")
         @Size(max = 255, message = "La ubicación no debe superar 255 caracteres")
+        @Schema(description = "Ubicación física del espacio", example = "Nivel 3")
         String location,
         @NotNull(message = "La tarifa por hora es obligatoria")
         @DecimalMin(value = "0.00", message = "La tarifa por hora debe ser mayor o igual a 0.00")
         @Digits(integer = 8, fraction = 2, message = "La tarifa por hora debe tener hasta 8 dígitos enteros y 2 decimales")
+        @Schema(description = "Tarifa monetaria por hora con dos decimales", example = "25.00")
         BigDecimal hourlyRate
 ) {
 }
