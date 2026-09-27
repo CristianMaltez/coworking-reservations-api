@@ -55,13 +55,13 @@ public class SecurityConfig {
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(new JwtRolesConverter()))
                         .authenticationEntryPoint((request, response, exception) -> writeError(
-                                response, objectMapper, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"))
+                                response, objectMapper, HttpServletResponse.SC_UNAUTHORIZED, "No autorizado"))
                 )
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> writeError(
-                                response, objectMapper, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized"))
+                                response, objectMapper, HttpServletResponse.SC_UNAUTHORIZED, "No autorizado"))
                         .accessDeniedHandler((request, response, accessDeniedException) -> writeError(
-                                response, objectMapper, HttpServletResponse.SC_FORBIDDEN, "Forbidden"))
+                                response, objectMapper, HttpServletResponse.SC_FORBIDDEN, "Prohibido"))
                 );
 
         return http.build();
@@ -108,7 +108,7 @@ public class SecurityConfig {
         objectMapper.writeValue(response.getWriter(), Map.of(
                 "timestamp", OffsetDateTime.now(ZoneOffset.UTC).toString(),
                 "status", status,
-                "error", status == HttpServletResponse.SC_UNAUTHORIZED ? "Unauthorized" : "Forbidden",
+                "error", status == HttpServletResponse.SC_UNAUTHORIZED ? "No autorizado" : "Prohibido",
                 "message", message,
                 "fields", Map.of()
         ));

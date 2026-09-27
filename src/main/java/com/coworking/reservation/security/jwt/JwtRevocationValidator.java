@@ -15,7 +15,7 @@ import java.util.UUID;
 @Component
 public class JwtRevocationValidator implements OAuth2TokenValidator<Jwt> {
 
-    private static final OAuth2Error INVALID_TOKEN = new OAuth2Error("invalid_token", "Invalid token", null);
+    private static final OAuth2Error INVALID_TOKEN = new OAuth2Error("invalid_token", "Token inválido", null);
 
     private final RevokedTokenRepository revokedTokenRepository;
     private final UserRepository userRepository;

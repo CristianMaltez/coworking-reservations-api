@@ -40,6 +40,14 @@ public class Space extends UuidEntity {
         this.spaceType = spaceType;
     }
 
+    public void update(String name, Integer capacity, String location, BigDecimal hourlyRate, SpaceType spaceType) {
+        this.name = name;
+        this.capacity = capacity;
+        this.location = location;
+        this.hourlyRate = hourlyRate;
+        this.spaceType = spaceType;
+    }
+
     public String getName() {
         return name;
     }
