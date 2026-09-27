@@ -95,7 +95,7 @@ CREATE TABLE reservations (
     space_id UUID NOT NULL,
     start_time TIMESTAMPTZ NOT NULL,
     end_time TIMESTAMPTZ NOT NULL,
-    status VARCHAR(30) NOT NULL,
+    status SMALLINT NOT NULL,
     total_price NUMERIC(10, 2) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -113,9 +113,9 @@ CREATE TABLE reservations (
     CONSTRAINT chk_reservations_status
         CHECK (
             status IN (
-                'PENDING_PAYMENT',
-                'CONFIRMED',
-                'CANCELLED'
+                1,
+                2,
+                3
             )
         ),
 

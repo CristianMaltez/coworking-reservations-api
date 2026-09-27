@@ -1,11 +1,11 @@
 package com.coworking.reservation.domain.entity;
 
+import com.coworking.reservation.domain.converter.ReservationStatusConverter;
 import com.coworking.reservation.domain.enums.ReservationStatus;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -32,8 +32,8 @@ public class Reservation extends UuidEntity {
     @Column(name = "end_time", nullable = false)
     private OffsetDateTime endTime;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 30)
+    @Convert(converter = ReservationStatusConverter.class)
+    @Column(name = "status", nullable = false)
     private ReservationStatus status;
 
     @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
@@ -70,6 +70,10 @@ public class Reservation extends UuidEntity {
 
     public ReservationStatus getStatus() {
         return status;
+    }
+
+    public void changeStatus(ReservationStatus status) {
+        this.status = status;
     }
 
     public BigDecimal getTotalPrice() {

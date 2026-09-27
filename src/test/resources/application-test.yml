@@ -1,0 +1,14 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+security:
+  jwt:
+    secret: "reservation-service-test-jwt-signing-key-long-enough-for-hs256-validation-2026"
+    access-token-ttl: 15m
+
+logging:
+  level:
+    org.testcontainers: INFO

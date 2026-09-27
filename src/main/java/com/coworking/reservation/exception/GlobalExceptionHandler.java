@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -36,6 +37,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, "Parámetro de solicitud inválido", Map.of());
     }
 
+    @ExceptionHandler(FieldValidationException.class)
+    public ResponseEntity<ApiError> handleFieldValidation(FieldValidationException exception) {
+        return error(HttpStatus.UNPROCESSABLE_ENTITY, "Error de validación", exception.getFields());
+    }
+
     @ExceptionHandler(DuplicateEmailException.class)
     public ResponseEntity<ApiError> handleDuplicateEmail(DuplicateEmailException exception) {
         return error(HttpStatus.CONFLICT, exception.getMessage(), Map.of());
@@ -44,6 +50,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({BadCredentialsException.class, DisabledException.class})
     public ResponseEntity<ApiError> handleUnauthorized(RuntimeException exception) {
         return error(HttpStatus.UNAUTHORIZED, "Credenciales inválidas", Map.of());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleForbidden(AccessDeniedException exception) {
+        return error(HttpStatus.FORBIDDEN, "Prohibido", Map.of());
     }
 
     @ExceptionHandler(AuthenticatedUserNotFoundException.class)
@@ -56,7 +67,7 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.INTERNAL_SERVER_ERROR, exception.getMessage(), Map.of());
     }
 
-    @ExceptionHandler(SpaceNotFoundException.class)
+    @ExceptionHandler({SpaceNotFoundException.class, ReservationNotFoundException.class})
     public ResponseEntity<ApiError> handleNotFound(RuntimeException exception) {
         return error(HttpStatus.NOT_FOUND, exception.getMessage(), Map.of());
     }
@@ -72,6 +83,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(SpaceHasReservationsException.class)
     public ResponseEntity<ApiError> handleConflict(SpaceHasReservationsException exception) {
+        return error(HttpStatus.CONFLICT, exception.getMessage(), Map.of());
+    }
+
+    @ExceptionHandler({ReservationOverlapException.class, InvalidReservationTransitionException.class})
+    public ResponseEntity<ApiError> handleReservationConflict(RuntimeException exception) {
         return error(HttpStatus.CONFLICT, exception.getMessage(), Map.of());
     }
 

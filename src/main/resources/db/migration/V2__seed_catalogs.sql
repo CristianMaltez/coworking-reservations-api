@@ -5,6 +5,6 @@ VALUES
 
 INSERT INTO space_types (code, name)
 VALUES
-    ('DESK', 'Desk'),
-    ('MEETING_ROOM', 'Meeting Room'),
-    ('PRIVATE_OFFICE', 'Private Office');
+    ('DESK', 'Escritorio'),
+    ('MEETING_ROOM', 'Sala de reuniones'),
+    ('PRIVATE_OFFICE', 'Oficina privada');
