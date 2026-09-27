@@ -20,6 +20,12 @@ security:
     secret: ${JWT_SIGNING_SECRET}
     access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:15m}
 
+external:
+  payment:
+    base-url: ${PAYMENT_SERVICE_URL}
+    connect-timeout: ${PAYMENT_CONNECT_TIMEOUT:1s}
+    read-timeout: ${PAYMENT_READ_TIMEOUT:2s}
+
 springdoc:
   api-docs:
     enabled: false

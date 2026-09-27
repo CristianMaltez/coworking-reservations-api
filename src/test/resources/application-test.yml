@@ -9,6 +9,12 @@ security:
     secret: "reservation-service-test-jwt-signing-key-long-enough-for-hs256-validation-2026"
     access-token-ttl: 15m
 
+external:
+  payment:
+    base-url: http://localhost:8080/mock/payments
+    connect-timeout: 1s
+    read-timeout: 2s
+
 logging:
   level:
     org.testcontainers: INFO

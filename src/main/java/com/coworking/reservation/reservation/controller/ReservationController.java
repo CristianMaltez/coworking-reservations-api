@@ -117,7 +117,7 @@ public class ReservationController {
     @PatchMapping("/{id}")
     @Operation(
             summary = "Actualizar estado de reserva",
-            description = "Solo statusCode es modificable. USER puede cancelar su propia reserva. ADMIN puede ejecutar transiciones válidas del ciclo de vida. Códigos: 1=Pendiente de pago, 2=Confirmada, 3=Cancelada."
+            description = "Actualiza el estado. Para statusCode=2 (Confirmada), ADMIN debe enviar paymentMethod y la API valida el pago externo antes de confirmar. Si el servicio de pago no está disponible, la reserva permanece Pendiente de pago y se retorna sin fallar la solicitud. Para statusCode=3 (Cancelada), paymentMethod no es requerido. USER solo puede cancelar su propia reserva. Códigos: 1=Pendiente de pago, 2=Confirmada, 3=Cancelada."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Estado actualizado"),
@@ -129,7 +129,7 @@ public class ReservationController {
                     content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "409", description = "Transición de estado inválida",
                     content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "422", description = "Código de estado inválido o validación de campos",
+            @ApiResponse(responseCode = "422", description = "Código de estado inválido, paymentMethod faltante/rechazado o validación de campos",
                     content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     public ReservationResponse updateStatus(@Parameter(description = "Identificador UUID de la reserva") @PathVariable UUID id,

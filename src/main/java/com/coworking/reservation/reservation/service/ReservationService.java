@@ -9,6 +9,10 @@ import com.coworking.reservation.exception.FieldValidationException;
 import com.coworking.reservation.exception.InvalidReservationTransitionException;
 import com.coworking.reservation.exception.ReservationNotFoundException;
 import com.coworking.reservation.exception.ReservationOverlapException;
+import com.coworking.reservation.payment.dto.PaymentValidationRequest;
+import com.coworking.reservation.payment.service.PaymentValidationResult;
+import com.coworking.reservation.payment.service.PaymentValidationService;
+import com.coworking.reservation.payment.service.PaymentValidationStatus;
 import com.coworking.reservation.repository.ReservationRepository;
 import com.coworking.reservation.repository.SpaceRepository;
 import com.coworking.reservation.repository.UserRepository;
@@ -20,9 +24,11 @@ import com.coworking.reservation.reservation.dto.ReservationSpaceResponse;
 import com.coworking.reservation.reservation.dto.ReservationStatusResponse;
 import com.coworking.reservation.reservation.dto.ReservationUserResponse;
 import com.coworking.reservation.reservation.dto.UpdateReservationStatusRequest;
+import com.coworking.reservation.reservation.event.ReservationConfirmedEvent;
 import com.coworking.reservation.reservation.state.ReservationState;
 import com.coworking.reservation.reservation.state.ReservationStateResolver;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,7 +37,10 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -56,15 +65,25 @@ public class ReservationService {
     private final UserRepository userRepository;
     private final ReservationPriceCalculator priceCalculator;
     private final ReservationStateResolver stateResolver;
+    private final PaymentValidationService paymentValidationService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final TransactionTemplate transactionTemplate;
+    private final TransactionTemplate readOnlyTransactionTemplate;
 
     public ReservationService(ReservationRepository reservationRepository, SpaceRepository spaceRepository,
             UserRepository userRepository, ReservationPriceCalculator priceCalculator,
-            ReservationStateResolver stateResolver) {
+            ReservationStateResolver stateResolver, PaymentValidationService paymentValidationService,
+            ApplicationEventPublisher eventPublisher, PlatformTransactionManager transactionManager) {
         this.reservationRepository = reservationRepository;
         this.spaceRepository = spaceRepository;
         this.userRepository = userRepository;
         this.priceCalculator = priceCalculator;
         this.stateResolver = stateResolver;
+        this.paymentValidationService = paymentValidationService;
+        this.eventPublisher = eventPublisher;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.readOnlyTransactionTemplate = new TransactionTemplate(transactionManager);
+        this.readOnlyTransactionTemplate.setReadOnly(true);
     }
 
     @Transactional
@@ -136,9 +155,42 @@ public class ReservationService {
         return toResponse(reservation);
     }
 
-    @Transactional
     public ReservationResponse updateStatus(UUID id, UpdateReservationStatusRequest request, Jwt jwt) {
         ReservationStatus targetStatus = resolveRequiredStatus(request.statusCode());
+
+        if (targetStatus == ReservationStatus.CONFIRMED) {
+            return confirmWithPaymentValidation(id, request, jwt);
+        }
+
+        return transactionTemplate.execute(status -> updateStatusInTransaction(id, targetStatus, jwt));
+    }
+
+    private ReservationResponse confirmWithPaymentValidation(UUID id, UpdateReservationStatusRequest request, Jwt jwt) {
+        if (request.paymentMethod() == null || request.paymentMethod().isBlank()) {
+            throw new FieldValidationException(Map.of("paymentMethod", "El método de pago es obligatorio para confirmar la reserva"));
+        }
+
+        ConfirmationContext context = readOnlyTransactionTemplate.execute(status -> validateConfirmationRequest(id, jwt));
+
+        PaymentValidationResult paymentResult = paymentValidationService.validate(new PaymentValidationRequest(
+                context.reservationId(),
+                context.userId(),
+                context.totalPrice(),
+                request.paymentMethod()
+        ));
+
+        if (paymentResult.status() == PaymentValidationStatus.REJECTED) {
+            throw new FieldValidationException(Map.of("paymentMethod", "El método de pago fue rechazado"));
+        }
+
+        if (paymentResult.status() == PaymentValidationStatus.PAYMENT_SERVICE_UNAVAILABLE) {
+            return readOnlyTransactionTemplate.execute(status -> currentReservationResponse(id, jwt));
+        }
+
+        return transactionTemplate.execute(status -> confirmApprovedReservation(id, jwt));
+    }
+
+    private ReservationResponse updateStatusInTransaction(UUID id, ReservationStatus targetStatus, Jwt jwt) {
         Reservation reservation = reservationRepository.findWithUserAndSpaceById(id)
                 .orElseThrow(() -> new ReservationNotFoundException(id));
 
@@ -156,6 +208,46 @@ public class ReservationService {
         return toResponse(reservation);
     }
 
+    private ConfirmationContext validateConfirmationRequest(UUID id, Jwt jwt) {
+        Reservation reservation = reservationRepository.findWithUserAndSpaceById(id)
+                .orElseThrow(() -> new ReservationNotFoundException(id));
+
+        assertCanAccess(reservation, jwt);
+        if (!isAdmin(jwt)) {
+            throw new AccessDeniedException("Prohibido");
+        }
+
+        assertValidTransition(reservation, ReservationStatus.CONFIRMED);
+        return new ConfirmationContext(
+                reservation.getId(),
+                reservation.getUser().getId(),
+                reservation.getUser().getEmail(),
+                reservation.getTotalPrice()
+        );
+    }
+
+    private ReservationResponse confirmApprovedReservation(UUID id, Jwt jwt) {
+        Reservation reservation = reservationRepository.findWithUserAndSpaceById(id)
+                .orElseThrow(() -> new ReservationNotFoundException(id));
+
+        assertCanAccess(reservation, jwt);
+        if (!isAdmin(jwt)) {
+            throw new AccessDeniedException("Prohibido");
+        }
+
+        assertValidTransition(reservation, ReservationStatus.CONFIRMED);
+        reservation.changeStatus(ReservationStatus.CONFIRMED);
+        eventPublisher.publishEvent(new ReservationConfirmedEvent(reservation.getId(), reservation.getUser().getEmail()));
+        return toResponse(reservation);
+    }
+
+    private ReservationResponse currentReservationResponse(UUID id, Jwt jwt) {
+        Reservation reservation = reservationRepository.findWithUserAndSpaceById(id)
+                .orElseThrow(() -> new ReservationNotFoundException(id));
+        assertCanAccess(reservation, jwt);
+        return toResponse(reservation);
+    }
+
     private void validateSearchInterval(OffsetDateTime from, OffsetDateTime to) {
         if (from != null && to != null) {
             validateInterval(from, to, "to", "La fecha final del filtro debe ser posterior a la fecha inicial");
@@ -165,6 +257,13 @@ public class ReservationService {
     private void validateInterval(OffsetDateTime startTime, OffsetDateTime endTime, String field, String message) {
         if (startTime != null && endTime != null && !startTime.isBefore(endTime)) {
             throw new FieldValidationException(Map.of(field, message));
+        }
+    }
+
+    private void assertValidTransition(Reservation reservation, ReservationStatus targetStatus) {
+        ReservationState currentState = stateResolver.resolve(reservation.getStatus());
+        if (currentState == null || !currentState.canTransitionTo(targetStatus)) {
+            throw new InvalidReservationTransitionException();
         }
     }
 
@@ -229,5 +328,13 @@ public class ReservationService {
                 reservation.getCreatedAt(),
                 reservation.getUpdatedAt()
         );
+    }
+
+    private record ConfirmationContext(
+            UUID reservationId,
+            UUID userId,
+            String userEmail,
+            BigDecimal totalPrice
+    ) {
     }
 }

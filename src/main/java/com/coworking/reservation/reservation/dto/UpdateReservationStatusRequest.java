@@ -8,6 +8,8 @@ public record UpdateReservationStatusRequest(
         @NotNull(message = "El estado es obligatorio")
         @Positive(message = "El estado debe ser positivo")
         @Schema(description = "Código de estado: 1=Pendiente de pago, 2=Confirmada, 3=Cancelada", example = "3")
-        Short statusCode
+        Short statusCode,
+        @Schema(description = "Método de pago requerido solo para confirmar con statusCode=2", example = "test-approved")
+        String paymentMethod
 ) {
 }
