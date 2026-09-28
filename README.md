@@ -763,6 +763,7 @@ Con más tiempo se implementaría:
 - caché del resultado por espacio y rango de fechas
 - invalidación al crear, confirmar o cancelar reservas
 - pruebas de integración del cálculo e invalidación
+- Modulo de auditoria
 
 #### Proveedor real de pagos
 
